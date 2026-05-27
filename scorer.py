@@ -20,6 +20,13 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
+# curl_cffi impersonates Chrome's TLS fingerprint, bypassing Cloudflare Bot Fight Mode
+try:
+    from curl_cffi import requests as cffi_requests
+    _CFFI_AVAILABLE = True
+except ImportError:
+    _CFFI_AVAILABLE = False
+
 # Bot UA — used for robots.txt / llms.txt checks (honest bot identity)
 BOT_HEADERS = {
     "User-Agent": (
@@ -28,8 +35,7 @@ BOT_HEADERS = {
     )
 }
 
-# Browser UA — used to fetch HTML for content analysis (we're analysing what
-# a human / rendered browser would see, not bypassing paywalls)
+# Browser UA — used when curl_cffi is unavailable (fallback only)
 BROWSER_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -85,11 +91,21 @@ class ScoredSite:
 
 def _get(url: str, timeout: int = TIMEOUT, use_browser_ua: bool = False) -> Optional[requests.Response]:
     try:
-        headers = BROWSER_HEADERS if use_browser_ua else BOT_HEADERS
-        # Split connect/read timeouts: short connect cap, longer read
-        r = requests.get(url, headers=headers, timeout=(CONNECT_TIMEOUT, timeout),
-                         allow_redirects=True)
-        return r
+        if use_browser_ua and _CFFI_AVAILABLE:
+            # curl_cffi impersonates Chrome TLS fingerprint — bypasses Cloudflare Bot Fight Mode
+            return cffi_requests.get(
+                url,
+                headers={"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                         "Accept-Language": "en-AU,en;q=0.9"},
+                impersonate="chrome124",
+                timeout=timeout,
+                allow_redirects=True,
+            )
+        else:
+            headers = BROWSER_HEADERS if use_browser_ua else BOT_HEADERS
+            return requests.get(url, headers=headers,
+                                timeout=(CONNECT_TIMEOUT, timeout),
+                                allow_redirects=True)
     except Exception:
         return None
 
@@ -421,8 +437,9 @@ def check_performance_hints(resp: Optional[requests.Response], soup: Optional[Be
         return CheckResult("Performance Hints", False, 0.0, 0.5, "Could not fetch page.", "Readiness: Data")
     signals = []
     elapsed = getattr(resp, "elapsed", None)
-    if elapsed and elapsed.total_seconds() < 3.0:
-        signals.append(f"Fast TTFB ({elapsed.total_seconds():.1f}s)")
+    elapsed_s = elapsed.total_seconds() if hasattr(elapsed, "total_seconds") else (elapsed if isinstance(elapsed, float) else None)
+    if elapsed_s is not None and elapsed_s < 3.0:
+        signals.append(f"Fast TTFB ({elapsed_s:.1f}s)")
     headers = {k.lower(): v.lower() for k, v in resp.headers.items()}
     if "cache-control" in headers:
         signals.append("Cache-Control set")
