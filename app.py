@@ -777,6 +777,43 @@ if page == "Score a URL":
             </div>
             """, unsafe_allow_html=True)
 
+        # ── Category peer auto-scan banner (shown inline, in red, above peer list) ──
+        _pending = st.session_state.get("_pending_peer_scan", [])
+        _pending_sv = st.session_state.get("_pending_peer_sv", "")
+        if _pending:
+            st.session_state["_pending_peer_scan"] = []
+            _scan_placeholder = st.empty()
+
+            def _scan_peer(retailer):
+                return retailer["domain"], score_url("https://" + retailer["domain"])
+
+            _completed_scan = 0
+            with ThreadPoolExecutor(max_workers=6) as _ex:
+                _futures = {_ex.submit(_scan_peer, p): p for p in _pending}
+                for _fut in as_completed(_futures):
+                    _dom_s, _res_s = _fut.result()
+                    st.session_state.baseline_results[_dom_s] = _res_s
+                    _completed_scan += 1
+                    _pct_s = _completed_scan / len(_pending)
+                    _bar_w = int(_pct_s * 100)
+                    _scan_placeholder.markdown(
+                        f'<div style="background:#3D0A0A;border:1.5px solid #FE5C4C;border-radius:12px;'
+                        f'padding:14px 20px;margin-bottom:16px;">'
+                        f'<div style="display:flex;align-items:center;gap:12px;">'
+                        f'<span style="color:#FE5C4C;font-size:1.1rem;">⏳</span>'
+                        f'<div style="flex:1;">'
+                        f'<p style="color:#FE5C4C;font-weight:700;font-size:0.85rem;margin:0 0 6px 0;">'
+                        f'Scanning {_pending_sv} category peers — {_completed_scan}/{len(_pending)} complete</p>'
+                        f'<div style="background:#6B1010;border-radius:100px;height:6px;overflow:hidden;">'
+                        f'<div style="width:{_bar_w}%;height:100%;background:#FE5C4C;border-radius:100px;'
+                        f'transition:width 0.3s ease;"></div></div>'
+                        f'<p style="color:#F5A5A5;font-size:0.75rem;margin:4px 0 0 0;">Last scanned: {_dom_s}</p>'
+                        f'</div></div></div>',
+                        unsafe_allow_html=True,
+                    )
+            _scan_placeholder.empty()
+            st.rerun()
+
         # ── Category peer comparison bar ───────────────────────────────────
         st.markdown("---")
         if subvertical != "Unknown":
@@ -1126,27 +1163,6 @@ if page == "Score a URL":
             fig_cmp.update_layout(height=380, **PLOTLY_LAYOUT)
             st.plotly_chart(fig_cmp, use_container_width=True)
 
-    # ── Category peer auto-scan (runs after results are on screen) ─────────
-    _pending = st.session_state.get("_pending_peer_scan", [])
-    _pending_sv = st.session_state.get("_pending_peer_sv", "")
-    if _pending:
-        st.session_state["_pending_peer_scan"] = []  # clear immediately to avoid re-run loops
-        _prog = st.progress(0, text=f"Scanning {len(_pending)} {_pending_sv} category peers...")
-        _completed = 0
-
-        def _scan_peer(retailer):
-            return retailer["domain"], score_url("https://" + retailer["domain"])
-
-        with ThreadPoolExecutor(max_workers=6) as _ex:
-            _futures = {_ex.submit(_scan_peer, p): p for p in _pending}
-            for _fut in as_completed(_futures):
-                _dom, _res = _fut.result()
-                st.session_state.baseline_results[_dom] = _res
-                _completed += 1
-                _prog.progress(_completed / len(_pending),
-                               text=f"Category scan {_completed}/{len(_pending)} — {_dom}")
-        _prog.empty()
-        st.rerun()  # refresh page so averages and peer bars update with new data
 
 
 # ─────────────────────────────────────────────────────────────────────────────
