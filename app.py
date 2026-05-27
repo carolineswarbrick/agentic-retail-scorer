@@ -923,6 +923,184 @@ if page == "Score a URL":
                     </div>"""
                 st.markdown(rows_html, unsafe_allow_html=True)
 
+        # ── Recommendations ───────────────────────────────────────────────
+        st.markdown("---")
+        st.markdown("### Recommendations")
+        st.markdown(
+            '<p style="color:#7AB8F5;font-size:0.85rem;margin-top:-10px;margin-bottom:20px;">'
+            "Top opportunities to improve Agentic Readiness, prioritised by impact — "
+            "and the Salesforce capabilities that can help.</p>",
+            unsafe_allow_html=True,
+        )
+
+        _REC_MAP = {
+            "llms.txt Present": {
+                "title": "Publish an llms.txt file",
+                "body": "Create an <code>llms.txt</code> at your root domain to give AI agents structured guidance on your product catalogue, policies, and key URLs. This is the fastest way to signal AI-readiness.",
+                "products": ["Agentforce", "Data Cloud"],
+                "pillar": "trust",
+            },
+            "AI Bots Blocked": {
+                "title": "Allow trusted AI agents in robots.txt",
+                "body": "Review your <code>robots.txt</code> directives. Blocking GPTBot, ClaudeBot, and PerplexityBot prevents AI-powered shopping assistants from discovering your catalogue and surfacing your products to consumers.",
+                "products": ["Agentforce"],
+                "pillar": "trust",
+            },
+            "robots.txt Present": {
+                "title": "Add a robots.txt file",
+                "body": "A <code>robots.txt</code> is the standard signal for AI crawlers about what they can access. Without one, agents cannot determine your crawl preferences or identify permitted entry points.",
+                "products": ["Agentforce"],
+                "pillar": "trust",
+            },
+            "Security Headers": {
+                "title": "Strengthen HTTP security headers",
+                "body": "Add HSTS, Content-Security-Policy, X-Content-Type-Options, and X-Frame-Options. These are mandatory trust signals for agents evaluating site safety before initiating transactions.",
+                "products": ["Salesforce Shield", "MuleSoft"],
+                "pillar": "trust",
+            },
+            "HTTPS / TLS": {
+                "title": "Enforce HTTPS across all pages",
+                "body": "All pages must be served over HTTPS with a valid TLS certificate. Mixed content or HTTP fallback is a hard blocker for AI agents operating under zero-trust policies.",
+                "products": ["Salesforce Shield"],
+                "pillar": "trust",
+            },
+            "Privacy Policy": {
+                "title": "Add a visible privacy policy link",
+                "body": "A discoverable privacy policy is required for AI agents to confirm compliance before processing personal data or completing transactions on behalf of consumers.",
+                "products": ["Salesforce Shield", "Marketing Cloud"],
+                "pillar": "trust",
+            },
+            "Returns Policy": {
+                "title": "Surface your returns policy prominently",
+                "body": "Agents completing purchases need to confirm return and refund terms before committing. Make this policy easily discoverable from the homepage and product detail pages.",
+                "products": ["Commerce Cloud"],
+                "pillar": "trust",
+            },
+            "Dark Patterns (absent)": {
+                "title": "Remove urgency manipulation patterns",
+                "body": "Countdown timers, fake scarcity alerts, and 'people viewing' notices undermine agent trust. AI agents trained on consumer protection principles will flag or avoid sites exhibiting these patterns.",
+                "products": ["Marketing Cloud", "Agentforce"],
+                "pillar": "trust",
+            },
+            "Schema.org Markup": {
+                "title": "Implement Schema.org structured data",
+                "body": "Add JSON-LD Product, Offer, Organization, and BreadcrumbList schemas. Structured data is the primary mechanism by which AI agents parse product information without executing JavaScript.",
+                "products": ["Data Cloud", "Einstein", "Commerce Cloud"],
+                "pillar": "readiness",
+            },
+            "Product Data Richness": {
+                "title": "Enrich product data in your markup",
+                "body": "Include price, availability, SKU/GTIN, aggregate ratings, and shipping details in your HTML or JSON-LD. Rich product data lets agents compare, recommend, and transact accurately.",
+                "products": ["Data Cloud", "Commerce Cloud"],
+                "pillar": "readiness",
+            },
+            "Sitemap": {
+                "title": "Publish an XML sitemap",
+                "body": "An XML sitemap at <code>/sitemap.xml</code> enables agents and AI crawlers to efficiently discover your full product catalogue without exhaustive crawling.",
+                "products": ["Commerce Cloud"],
+                "pillar": "readiness",
+            },
+            "On-Site Search": {
+                "title": "Add SearchAction schema to your search",
+                "body": "Expose site search via a <code>SearchAction</code> JSON-LD schema. This allows agents to programmatically invoke product search as part of a shopping workflow — no page navigation required.",
+                "products": ["Einstein Search", "Commerce Cloud"],
+                "pillar": "readiness",
+            },
+            "Guest Checkout Signal": {
+                "title": "Enable and signal guest checkout",
+                "body": "Guest checkout is required for agent-assisted purchases — agents cannot create accounts. Expose clear cart, checkout, and buy-now paths that work without registration.",
+                "products": ["Commerce Cloud", "Agentforce"],
+                "pillar": "readiness",
+            },
+            "BNPL / Payment Options": {
+                "title": "Expand payment method coverage",
+                "body": "Offer BNPL (Afterpay, Zip) and digital wallets (Apple Pay, Google Pay, PayPal). Agents completing purchases need payment options that work without manual card entry.",
+                "products": ["Commerce Cloud"],
+                "pillar": "readiness",
+            },
+            "Headless / API Readiness": {
+                "title": "Adopt a headless or API-first architecture",
+                "body": "A Storefront API or GraphQL endpoint allows AI agents to query products, check stock, and submit orders programmatically — bypassing fragile HTML parsing entirely.",
+                "products": ["MuleSoft", "Commerce Cloud"],
+                "pillar": "readiness",
+            },
+            "Accessibility Basics": {
+                "title": "Improve accessibility signals",
+                "body": "Add alt text to product images, a <code>lang</code> attribute to your HTML element, and proper form labels. These signals allow AI to navigate and interpret pages reliably.",
+                "products": ["Experience Cloud"],
+                "pillar": "readiness",
+            },
+            "Performance Hints": {
+                "title": "Improve page performance and caching",
+                "body": "Set Cache-Control headers, deploy a CDN, and enable lazy loading. Fast, well-cached pages reduce agent latency and improve transaction reliability at scale.",
+                "products": ["MuleSoft", "Commerce Cloud"],
+                "pillar": "readiness",
+            },
+        }
+
+        _PRODUCT_COLORS = {
+            "Agentforce":       "#0176D3",
+            "Data Cloud":       "#06A59A",
+            "Commerce Cloud":   "#F06F20",
+            "Einstein":         "#7B5EA7",
+            "Einstein Search":  "#7B5EA7",
+            "MuleSoft":         "#EE5340",
+            "Salesforce Shield":"#04844B",
+            "Marketing Cloud":  "#E26B0A",
+            "Experience Cloud": "#1589EE",
+        }
+
+        _rec_items = []
+        for _chk in r.checks:
+            if _chk.name in _REC_MAP and _chk.score < 1.0:
+                _priority = _chk.weight * (1.0 - _chk.score)
+                _rec_items.append((_priority, _chk, _REC_MAP[_chk.name]))
+
+        _rec_items.sort(key=lambda x: x[0], reverse=True)
+        _top_recs = _rec_items[:6]
+
+        if _top_recs:
+            for _i in range(0, len(_top_recs), 2):
+                _cols = st.columns(2)
+                for _j, (_pri, _chk, _rec) in enumerate(_top_recs[_i:_i + 2]):
+                    with _cols[_j]:
+                        _pc = SF_BLUE if _rec["pillar"] == "trust" else SF_TEAL
+                        _pl = "Agentic Trust" if _rec["pillar"] == "trust" else "Agentic Readiness"
+                        _pills = "".join(
+                            f'<span style="display:inline-block;background:{_PRODUCT_COLORS.get(p,"#1B5FA8")};'
+                            f'color:#FFFFFF;border-radius:100px;padding:2px 10px;font-size:0.72rem;'
+                            f'font-weight:700;margin-right:5px;margin-top:4px;">{p}</span>'
+                            for p in _rec["products"]
+                        )
+                        _score_badge_color = SF_RED if _chk.score == 0 else SF_AMBER
+                        _score_pct = f"{_chk.score * 100:.0f}%"
+                        st.markdown(f"""
+                        <div class="sf-card" style="height:100%;box-sizing:border-box;">
+                          <div style="display:flex;align-items:flex-start;gap:12px;">
+                            <div style="width:4px;min-height:44px;background:{_pc};border-radius:4px;flex-shrink:0;margin-top:4px;"></div>
+                            <div style="flex:1;min-width:0;">
+                              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
+                                <span style="font-size:0.68rem;color:{_pc};font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">{_pl}</span>
+                                <span style="font-size:0.68rem;color:#4D86BA;">·</span>
+                                <span style="font-size:0.68rem;color:#4D86BA;">{_chk.name}</span>
+                                <span style="margin-left:auto;font-size:0.68rem;background:{_score_badge_color};color:#032D60;border-radius:4px;padding:1px 7px;font-weight:800;">{_score_pct}</span>
+                              </div>
+                              <p style="color:#FFFFFF;font-weight:800;font-size:0.92rem;margin:0 0 8px 0;line-height:1.35;">{_rec["title"]}</p>
+                              <p style="color:#C9E5FF;font-size:0.81rem;line-height:1.6;margin:0 0 12px 0;">{_rec["body"]}</p>
+                              <div>{_pills}</div>
+                            </div>
+                          </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div class="sf-card" style="text-align:center;padding:32px;">
+              <span style="font-size:1.5rem;">🏆</span>
+              <p style="color:#FFFFFF;font-weight:700;margin:8px 0 4px;">Excellent Agentic Readiness</p>
+              <p style="color:#C9E5FF;font-size:0.85rem;margin:0;">All checks passed — this site is well-optimised for AI agent access.</p>
+            </div>
+            """, unsafe_allow_html=True)
+
         # ── Session comparison ─────────────────────────────────────────────
         if len(st.session_state.single_results) > 1:
             st.markdown("---")
