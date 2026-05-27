@@ -601,7 +601,96 @@ if page == "Score a URL":
                 st.session_state.tier_filter_override = []
                 st.rerun()
 
-    if st.session_state.single_results:
+    if not st.session_state.single_results:
+        # ── Empty state — show skeleton of what results look like ─────────
+        st.markdown("---")
+        c1, c2, c3, c4 = st.columns(4)
+        for col, label, color in [
+            (c1, "Overall Score", "#1B5FA8"),
+            (c2, "Agentic Trust", "#1B5FA8"),
+            (c3, "Agentic Readiness", "#1B5FA8"),
+            (c4, "Domain", "#1B5FA8"),
+        ]:
+            with col:
+                st.markdown(f"""
+                <div style="background:linear-gradient(135deg,#0A3A6E 0%,#0A2E5C 100%);
+                            border:1px solid #1B5FA8;border-radius:12px;padding:16px 20px;
+                            box-shadow:0 2px 12px rgba(0,0,0,0.25);min-height:110px;">
+                  <p style="color:#4D86BA;font-size:0.75rem;text-transform:uppercase;
+                            letter-spacing:0.06em;font-weight:700;margin:0 0 10px 0;">{label}</p>
+                  <div style="background:#0A2E5C;border-radius:8px;height:28px;width:60%;
+                              opacity:0.5;margin-bottom:10px;"></div>
+                  <div style="background:#0A2E5C;border-radius:100px;height:8px;width:100%;opacity:0.4;"></div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # How it works cards
+        st.markdown("### How it works")
+        h1, h2, h3 = st.columns(3)
+        for col, num, title, body in [
+            (h1, "1", "Enter any retailer URL",
+             "Type a domain like <code>woolworths.com.au</code> and click Analyse. Works for any retail website worldwide."),
+            (h2, "2", "We scan 20+ signals",
+             "HTTPS, AI bot directives, Schema.org markup, guest checkout, BNPL, headless API signals, dark patterns, and more."),
+            (h3, "3", "See scores + category benchmarks",
+             "Get Agentic Trust and Readiness scores, a grade, and automatic comparison against all peers in the same retail subvertical."),
+        ]:
+            with col:
+                st.markdown(f"""
+                <div class="sf-card" style="height:100%;">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                    <span style="background:{SF_BLUE};color:#fff;border-radius:50%;width:28px;height:28px;
+                                 display:flex;align-items:center;justify-content:center;
+                                 font-weight:800;font-size:0.85rem;flex-shrink:0;">{num}</span>
+                    <span style="font-weight:700;color:#FFFFFF;font-size:0.95rem;">{title}</span>
+                  </div>
+                  <p style="color:#C9E5FF;font-size:0.85rem;line-height:1.6;margin:0;">{body}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # What gets scored
+        st.markdown("### What gets scored")
+        p1, p2 = st.columns(2)
+        with p1:
+            st.markdown(f"""
+            <div class="sf-card">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                <span style="background:{SF_BLUE};border-radius:8px;padding:5px 10px;font-size:1rem;">🛡</span>
+                <span style="font-weight:800;color:#FFFFFF;font-size:1rem;">Agentic Trust</span>
+                <span class="sf-pill" style="margin-left:auto;">40%</span>
+              </div>
+              <p style="color:#C9E5FF;font-size:0.83rem;line-height:1.8;margin:0;">
+                ✦ &nbsp;HTTPS &amp; security headers<br>
+                ✦ &nbsp;Privacy &amp; returns policy<br>
+                ✦ &nbsp;Dark pattern detection<br>
+                ✦ &nbsp;AI bot directives (GPTBot, ClaudeBot…)<br>
+                ✦ &nbsp;llms.txt presence
+              </p>
+            </div>
+            """, unsafe_allow_html=True)
+        with p2:
+            st.markdown(f"""
+            <div class="sf-card">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                <span style="background:{SF_TEAL};color:#032D60;border-radius:8px;padding:5px 10px;font-size:1rem;">⚡</span>
+                <span style="font-weight:800;color:#FFFFFF;font-size:1rem;">Agentic Readiness</span>
+                <span class="sf-pill" style="margin-left:auto;">60%</span>
+              </div>
+              <p style="color:#C9E5FF;font-size:0.83rem;line-height:1.8;margin:0;">
+                ✦ &nbsp;Schema.org &amp; product data richness<br>
+                ✦ &nbsp;Sitemap &amp; on-site search<br>
+                ✦ &nbsp;Guest checkout &amp; BNPL signals<br>
+                ✦ &nbsp;Headless / API architecture<br>
+                ✦ &nbsp;Accessibility &amp; performance
+              </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+    else:
         latest_url = list(st.session_state.single_results.keys())[-1]
         r = st.session_state.single_results[latest_url]
 
